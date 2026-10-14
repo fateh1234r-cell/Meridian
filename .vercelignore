@@ -1,0 +1,6 @@
+# source material and tooling — not part of the website
+raw/
+scripts/
+prompts/
+node_modules/
+*.py

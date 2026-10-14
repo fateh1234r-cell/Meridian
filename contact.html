@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Contact — Meridian Group</title>
+  <meta name="description" content="Talk to Meridian Build, Meridian Interiors or Meridian Glass Studio. One enquiry reaches the right team by email and WhatsApp.">
+  <meta property="og:title" content="Contact Meridian Group">
+  <link rel="icon" href="/assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=boska@400,500,700,400i,500i&amp;f[]=switzer@300,400,500,600&amp;display=swap">
+  <link rel="stylesheet" href="/assets/css/site.css">
+  <script defer src="/assets/js/site-config.js"></script>
+  <script defer src="/assets/js/layout.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/motion@12.23.24/dist/motion.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script defer src="/assets/js/motion-site.js"></script>
+</head>
+<body data-division="group">
+<main id="main">
+  <header class="page-hero wrap">
+    <p class="eyebrow">Contact</p>
+    <h1 style="margin-top:1.5rem" data-split>Let's <em>talk.</em></h1>
+    <p class="lede muted" data-reveal>Choose the studio you need — your enquiry goes straight to that team by email, and opens a WhatsApp chat with them.</p>
+  </header>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap contact-grid">
+      <form id="enquiry" class="form" novalidate data-reveal>
+        <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="field field--full">
+          <label for="division">I'd like to speak to</label>
+          <select id="division" name="division" required>
+            <option value="group">Meridian Build — construction &amp; development</option>
+            <option value="interiors">Meridian Interiors — interior design</option>
+            <option value="glass">Meridian Glass Studio — architectural glass art</option>
+          </select>
+        </div>
+        <div class="field"><label for="name">Full name</label><input id="name" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+91" required></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="city">City</label><input id="city" name="city" autocomplete="address-level2"></div>
+        <div class="field"><label for="project_type">Project type</label>
+          <select id="project_type" name="project_type" required>
+            <option>Residence / apartment</option><option>Villa / bungalow</option><option>Office / commercial</option><option>Hospitality / retail</option><option>Development / land</option><option>Glass art commission</option>
+          </select></div>
+        <div class="field"><label for="budget">Budget</label>
+          <select id="budget" name="budget" required>
+            <option>Under ₹25 lakh</option><option>₹25 lakh – ₹1 crore</option><option>₹1 – 5 crore</option><option>₹5 crore +</option><option>Not sure yet</option>
+          </select></div>
+        <div class="field field--full"><label for="message">Tell us about the project</label><textarea id="message" name="message" required></textarea></div>
+        <div class="field--full"><button class="btn" type="submit" data-magnetic>Send enquiry <span aria-hidden="true">→</span></button></div>
+        <p class="form-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <aside data-stagger>
+        <div class="contact-card"><p class="eyebrow">Group office</p><p>Level 14, Meridian House<br>Bandra Kurla Complex, Mumbai 400051</p></div>
+        <div class="contact-card"><h3>Meridian Build</h3><a href="tel:+919000000001">+91 90000 00001</a><a href="mailto:build@meridian-demo.in">build@meridian-demo.in</a></div>
+        <div class="contact-card"><h3>Meridian Interiors</h3><a href="tel:+919000000002">+91 90000 00002</a><a href="mailto:interiors@meridian-demo.in">interiors@meridian-demo.in</a></div>
+        <div class="contact-card"><h3>Meridian Glass Studio</h3><a href="tel:+919000000003">+91 90000 00003</a><a href="mailto:studio@meridian-demo.in">studio@meridian-demo.in</a></div>
+        <p class="muted" style="font-size:.9rem">Mon – Sat · 10:00 – 19:00 IST</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding-bottom:clamp(4rem,8vw,8rem)">
+    <!-- Replace with the client's own Google Maps embed -->
+    <iframe class="map-embed" title="Map of Bandra Kurla Complex, Mumbai" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+      src="https://www.google.com/maps?q=Bandra%20Kurla%20Complex%2C%20Mumbai&amp;output=embed"></iframe>
+  </section>
+</main>
+</body>
+</html>
