@@ -32,7 +32,7 @@
       </a>
       <nav class="nav" aria-label="Primary">${navLinks}</nav>
       <nav class="switcher" aria-label="Group companies">${switcher}</nav>
-      <button class="menu-btn" aria-expanded="false" aria-controls="mobile-menu">Menu</button>
+      <button class="menu-btn" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>`;
   body.prepend(header);
 
@@ -42,17 +42,32 @@
 
   const menu = document.createElement("div");
   menu.className = "mobile-menu"; menu.id = "mobile-menu";
-  menu.innerHTML = `<nav aria-label="Mobile">${navLinks}</nav><nav class="switcher" aria-label="Group companies (mobile)">${switcher}</nav>
-    <p class="muted">${S.group.address}<br><a href="tel:${S.divisions[division].phone.replace(/\s/g, "")}">${S.divisions[division].phone}</a></p>`;
+  menu.setAttribute("role", "dialog"); menu.setAttribute("aria-modal", "true"); menu.setAttribute("aria-label", "Site menu");
+  menu.innerHTML = `
+    <div class="drawer__head"><a class="brand" href="${S.divisions[division].home}">${mark}<span class="brand-name">Meridian<small>${SUB[division]}</small></span></a></div>
+    <p class="drawer__label">Our companies</p>
+    <nav class="switcher switcher--bar" aria-label="Group companies (mobile)">${switcher}</nav>
+    <p class="drawer__label">${S.divisions[division].label === "Build" ? "Meridian Build" : S.divisions[division].name}</p>
+    <nav class="drawer__nav" aria-label="Mobile">${navLinks}</nav>
+    <div class="drawer__foot">
+      <a class="btn" href="/contact.html?division=${division}">Start a project <span aria-hidden="true">&rarr;</span></a>
+      <p class="muted">${S.group.address}<br><a href="tel:${S.divisions[division].phone.replace(/\s/g, "")}">${S.divisions[division].phone}</a></p>
+    </div>`;
   header.after(menu);
+  const scrim = document.createElement("div");
+  scrim.className = "drawer-scrim"; scrim.setAttribute("aria-hidden", "true");
+  menu.after(scrim);
   const menuBtn = header.querySelector(".menu-btn");
-  menuBtn.addEventListener("click", () => {
-    const open = menu.classList.toggle("is-open");
+  const setMenu = (open) => {
+    menu.classList.toggle("is-open", open); scrim.classList.toggle("is-open", open); header.classList.toggle("menu-open", open);
     menuBtn.setAttribute("aria-expanded", String(open));
-    menuBtn.textContent = open ? "Close" : "Menu";
-    header.classList.toggle("is-solid", open || scrollY > 40);
+    menuBtn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     document.documentElement.style.overflow = open ? "hidden" : "";
-  });
+  };
+  menuBtn.addEventListener("click", () => setMenu(!menu.classList.contains("is-open")));
+  scrim.addEventListener("click", () => setMenu(false));
+  addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
 
   // Footer
   const year = new Date().getFullYear();

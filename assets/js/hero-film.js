@@ -99,8 +99,15 @@ void main(){
     const pattern = hero.dataset.frames, count = Number(hero.dataset.frameCount || 0);
     if (!pattern || count < 2) return false;
     const mobile = matchMedia("(max-width: 860px)").matches;
-    const url = (k) => pattern.replace("{n}", String(k + 1).padStart(2, "0")).replace(".webp", mobile && hero.dataset.framesMobile ? "-m.webp" : ".webp");
-    try { const r = await fetch(url(0), { method: "HEAD" }); if (!r.ok) return false; } catch { return false; }
+    // portrait screens prefer a dedicated 9:16 set (NN-p.webp) when it exists
+    const portraitScreen = matchMedia("(orientation: portrait) and (max-width: 860px)").matches;
+    const exists = async (u) => { try { return (await fetch(u, { method: "HEAD" })).ok; } catch { return false; } };
+    const base = (k) => pattern.replace("{n}", String(k + 1).padStart(2, "0"));
+    let suffix = mobile && hero.dataset.framesMobile ? "-m.webp" : ".webp";
+    if (portraitScreen && (await exists(base(0).replace(".webp", "-p.webp")))) suffix = "-p.webp";
+    const portraitSet = suffix === "-p.webp";
+    const url = (k) => base(k).replace(".webp", suffix);
+    if (!(await exists(url(0)))) return false;
 
     const stage = hero.querySelector(".film-hero__stage");
     const canvas = document.createElement("canvas");
@@ -111,17 +118,40 @@ void main(){
     const loadFrame = (k) => new Promise((res) => { const im = new Image(); im.decoding = "async"; im.onload = () => { frames[k] = im; res(); }; im.onerror = res; im.src = url(k); });
     await loadFrame(0);
     hero.classList.add("is-gl", "is-sequence");
+    // a single thin progress line replaces the counter and chapter rail
+    const line = document.createElement("div");
+    line.className = "film-progress"; line.setAttribute("aria-hidden", "true"); line.innerHTML = "<i></i>";
+    stage.append(line);
+    const lineFill = line.firstElementChild;
     // load the rest in order, a few at a time, so early frames are ready first
     (async () => { for (let k = 1; k < count; k += 4) await Promise.all([k, k + 1, k + 2, k + 3].filter((x) => x < count).map(loadFrame)); })();
 
     const resize = () => { const d = Math.min(devicePixelRatio || 1, 1.75); canvas.width = Math.round(stage.clientWidth * d); canvas.height = Math.round(stage.clientHeight * d); };
     resize(); addEventListener("resize", resize);
     const nearest = (k) => { for (let d = 0; d < count; d++) { if (frames[k - d]) return frames[k - d]; if (frames[k + d]) return frames[k + d]; } return frames[0]; };
+    // tall screen + landscape frames: show the WHOLE frame, with a soft blurred copy filling above/below
+    const fitMode = () => !portraitSet && canvas.height > canvas.width * 1.1;
+    const blurCanvas = document.createElement("canvas"); blurCanvas.width = 48; blurCanvas.height = 27;
+    const bctx = blurCanvas.getContext("2d");
     const draw = (img, alpha, scale, ox, oy) => {
       if (!img) return;
-      const cw = canvas.width, ch = canvas.height, r = Math.max(cw / img.naturalWidth, ch / img.naturalHeight) * scale;
-      const w = img.naturalWidth * r, h = img.naturalHeight * r;
+      const cw = canvas.width, ch = canvas.height, iw = img.naturalWidth, ih = img.naturalHeight;
       ctx.globalAlpha = alpha;
+      if (fitMode()) {
+        // backdrop: tiny downscale then upscale = cheap, cross-browser blur
+        bctx.drawImage(img, 0, 0, blurCanvas.width, blurCanvas.height);
+        const rb = Math.max(cw / blurCanvas.width, ch / blurCanvas.height) * 1.15;
+        const bw = blurCanvas.width * rb, bh = blurCanvas.height * rb;
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(blurCanvas, (cw - bw) / 2, (ch - bh) / 2, bw, bh);
+        ctx.fillStyle = "rgba(12, 10, 8, 0.45)"; ctx.fillRect(0, 0, cw, ch);
+        // the full frame, a touch wider than the screen so it reads large, set in the upper-middle
+        const r = (cw / iw) * Math.min(scale, 1.02), w = iw * r, h = ih * r;
+        ctx.drawImage(img, (cw - w) / 2 + ox * cw, ch * 0.4 - h / 2 + oy * ch, w, h);
+        return;
+      }
+      const r = Math.max(cw / iw, ch / ih) * scale;
+      const w = iw * r, h = ih * r;
       ctx.drawImage(img, (cw - w) / 2 + ox * cw, (ch - h) / 2 + oy * ch, w, h);
     };
 
@@ -129,13 +159,29 @@ void main(){
     let sp = 0, mx = 0, my = 0, tx = 0, ty = 0, last = -1;
     if (matchMedia("(hover: hover)").matches) addEventListener("pointermove", (e) => { tx = (e.clientX / innerWidth - 0.5); ty = (e.clientY / innerHeight - 0.5); });
     const read = () => { const r = hero.getBoundingClientRect(); return Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight))); };
-    const tick = () => {
+    // data-play="auto": the film plays by itself like a video loop (per-frame time, end hold, loop)
+    const auto = hero.dataset.play === "auto";
+    const perFrame = Number(hero.dataset.frameTime || 0.62), hold = 1.6;
+    const loopLen = perFrame * (count - 1) + hold;
+    let clock = 0, prev = performance.now();
+    if (auto) chapters.forEach((c, k) => c.addEventListener("click", () => { clock = (k / chapters.length) * perFrame * (count - 1) + 0.01; }));
+    const tick = (now = performance.now()) => {
       requestAnimationFrame(tick);
+      const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
       const r = hero.getBoundingClientRect(); if (r.bottom < 0 || document.hidden) return;
-      sp += (read() - sp) * 0.14;
+      if (auto) {
+        clock = (clock + dt) % loopLen;
+        const target = Math.min(1, clock / (perFrame * (count - 1)));
+        // ease out of the loop end so the restart crossfades instead of cutting
+        sp = clock < 0.05 ? target : sp + (target - sp) * 0.25;
+      } else {
+        const FINISH = 0.85;  // the story completes here; the rest of the hero holds the final scene
+        sp += (Math.min(1, read() / FINISH) - sp) * 0.22;   // snappy follow = fast-paced
+        if (read() >= FINISH && 1 - sp < 0.002) sp = 1;
+      }
       mx += (tx - mx) * 0.05; my += (ty - my) * 0.05;
       const f = sp * (count - 1), a = Math.floor(f), t = f - a;
-      const s = 1.03 + 0.02 * Math.sin(sp * Math.PI);            // breathing so held frames never look frozen
+      const s = auto ? 1.05 + 0.035 * Math.sin(now / 5200) : 1.03 + 0.02 * Math.sin(sp * Math.PI);   // slow camera breathing
       ctx.globalAlpha = 1; ctx.clearRect(0, 0, canvas.width, canvas.height);
       draw(frames[a] || nearest(a), 1, s, -mx * 0.012, -my * 0.01);
       // "tight" blend: each frame holds clean, dissolving briefly between views (for walk-throughs where the camera moves)
@@ -146,7 +192,14 @@ void main(){
       const at = (hero.dataset.titleAt || "").split(",").filter(Boolean).map(Number);
       const show = at.length ? Math.max(0, at.reduce((acc, v, k) => (sp >= v ? k : acc), 0)) : Math.min(titles - 1, Math.floor(sp * titles * 0.999));
       if (show !== last) { last = show; showTitle(show); }
+      const segS = at.length ? at[show] : show / titles;
+      const segE = at.length ? (at[show + 1] ?? 1) : (show + 1) / titles;
+      const q = Math.min(1, Math.max(0, (sp - segS) / Math.max(0.001, segE - segS)));
+      const dk = Math.min(1, Math.max(0, (q - 0.15) / 0.3));
+      const dockNow = sp >= 0.999 ? 1 : dk * dk * (3 - 2 * dk);
+      hero.style.setProperty("--dock", dockNow.toFixed(3));
       chapters.forEach((c, k) => c.style.setProperty("--p", String(Math.min(1, Math.max(0, sp * chapters.length - k)))));
+      if (lineFill) lineFill.style.transform = `scaleX(${sp.toFixed(4)})`;
       if (counter) counter.textContent = hero.dataset.counter === "index" ? String(show + 1).padStart(2, "0") : String(Math.round(sp * 100));
     };
     tick();
@@ -186,6 +239,7 @@ void main(){
       chapters.forEach((c, k) => { c.classList.toggle("is-on", k === i); c.classList.toggle("is-done", k < i); });
     };
     showTitle(0);
+    if (hero.dataset.play === "reveal") return;   // hero-reveal.js owns this hero
     if (reduce || n < 2) { hero.classList.add("is-static"); return; }
 
     // scroll progress through the tall hero, smoothed

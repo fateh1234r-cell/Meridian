@@ -6,6 +6,9 @@ Any file names work; they are sorted naturally (1, 2, ... 10, 11), so name them 
     python scripts/prepare-frames.py            # all sites
     python scripts/prepare-frames.py build      # one site
 
+Portrait (9:16) frames for phones go in raw/frames/<site>-portrait/ and become NN-p.webp; phones in portrait
+use them automatically. Run e.g.  python scripts/prepare-frames.py build-portrait
+
 Writes assets/frames/<site>/01.webp ... NN.webp (1920 px wide) plus 01-m.webp ... (1280 px, for phones),
 and prints the frame count. If it isn't 24, update data-frame-count on that page's .film-hero.
 """
@@ -23,10 +26,12 @@ for site in SITES:
     if not files:
         print(f"{site}: no images in {src}")
         continue
-    out = ROOT / "assets" / "frames" / site
+    portrait = site.endswith("-portrait")
+    out = ROOT / "assets" / "frames" / site.replace("-portrait", "")
     out.mkdir(parents=True, exist_ok=True)
-    for old in out.glob("*.webp"):
-        old.unlink()
+    for old in out.glob("*-p.webp" if portrait else "*.webp"):
+        if portrait or not old.name.endswith("-p.webp"):
+            old.unlink()
     size = None
     for k, f in enumerate(files, 1):
         im = Image.open(f).convert("RGB")
@@ -34,7 +39,7 @@ for site in SITES:
             size = im.size                      # every frame is matched to the first frame's framing
         elif im.size != size:
             im = im.resize(size, Image.LANCZOS)
-        for width, suffix, q in ((1920, "", 82), (1280, "-m", 78)):
+        for width, suffix, q in (((1080, "-p", 80),) if portrait else ((1920, "", 82), (1280, "-m", 78))):
             w = min(width, im.width)
             im.resize((w, round(im.height * w / im.width)), Image.LANCZOS).save(out / f"{k:02d}{suffix}.webp", "WEBP", quality=q, method=6)
     print(f"{site}: {len(files)} frames -> {out}  (data-frame-count should be {len(files)})")

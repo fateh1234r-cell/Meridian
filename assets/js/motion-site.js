@@ -26,7 +26,8 @@
     const y = scrollY;
     const menuOpen = document.querySelector(".mobile-menu.is-open");
     header.classList.toggle("is-solid", y > 40 || !!menuOpen);
-    header.classList.toggle("is-hidden", !menuOpen && y > 500 && y > lastY + 2);
+    // phones/tablets: the header is just a fixed menu icon, so it never hides on scroll
+    header.classList.toggle("is-hidden", !menuOpen && innerWidth > 1020 && y > 500 && y > lastY + 2);
     if (y < lastY - 2) header.classList.remove("is-hidden");
     lastY = y;
   };
@@ -252,11 +253,14 @@
       stage.style.transform = `scale(${lerp(1, 0.9, p)})`;
       stage.style.borderRadius = `${lerp(0, 28, p)}px`;
     }, { target: hero, offset: ["end end", "end start"] });
+    const autoPlay = hero.dataset.play === "auto" || hero.dataset.play === "reveal";
+    const content = hero.querySelector(".film-hero__content");
     scroll((p) => {
-      const f = 1 - range(p, 0, 0.06);
+      const f = 1 - range(p, 0, autoPlay ? 0.35 : 0.06);
+      if (autoPlay && content) { content.style.opacity = String(f); return; }   // children keep their own reveal transitions
       if (lede) lede.style.opacity = String(f);
       if (pill) pill.style.opacity = String(f);
-    }, { target: hero, offset: ["start start", "end end"] });
+    }, { target: hero, offset: autoPlay ? ["start start", "end start"] : ["start start", "end end"] });
   });
 
   // ---------- Media reveal: a slow curtain lift with the image settling inside (CSS-driven) ----------
