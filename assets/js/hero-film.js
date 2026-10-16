@@ -130,7 +130,8 @@ void main(){
     resize(); addEventListener("resize", resize);
     const nearest = (k) => { for (let d = 0; d < count; d++) { if (frames[k - d]) return frames[k - d]; if (frames[k + d]) return frames[k + d]; } return frames[0]; };
     // tall screen + landscape frames: show the WHOLE frame, with a soft blurred copy filling above/below
-    const fitMode = () => !portraitSet && canvas.height > canvas.width * 1.1;
+    const fitMode = () => false;   // phones now fill the screen (cover + slow pan) instead of letterboxing
+    const tall = () => !portraitSet && canvas.height > canvas.width * 1.1;
     const blurCanvas = document.createElement("canvas"); blurCanvas.width = 48; blurCanvas.height = 27;
     const bctx = blurCanvas.getContext("2d");
     const draw = (img, alpha, scale, ox, oy) => {
@@ -183,11 +184,13 @@ void main(){
       const f = sp * (count - 1), a = Math.floor(f), t = f - a;
       const s = auto ? 1.05 + 0.035 * Math.sin(now / 5200) : 1.03 + 0.02 * Math.sin(sp * Math.PI);   // slow camera breathing
       ctx.globalAlpha = 1; ctx.clearRect(0, 0, canvas.width, canvas.height);
-      draw(frames[a] || nearest(a), 1, s, -mx * 0.012, -my * 0.01);
+      // tall screens: a slow pan across the cropped landscape frame so more of the scene comes into view
+      const pan = tall() ? (sp - 0.5) * -0.55 : 0;
+      draw(frames[a] || nearest(a), 1, s, -mx * 0.012 + pan, -my * 0.01);
       // "tight" blend: each frame holds clean, dissolving briefly between views (for walk-throughs where the camera moves)
       const tight = hero.dataset.blend === "tight";
       const alpha = tight ? (t <= 0.32 ? 0 : t >= 0.68 ? 1 : ((x) => x * x * (3 - 2 * x))((t - 0.32) / 0.36)) : t;
-      if (alpha > 0.001 && a + 1 < count) draw(frames[a + 1] || nearest(a + 1), alpha, s, -mx * 0.012, -my * 0.01);
+      if (alpha > 0.001 && a + 1 < count) draw(frames[a + 1] || nearest(a + 1), alpha, s, -mx * 0.012 + pan, -my * 0.01);
       // optional data-title-at="0,0.2,0.85,0.96": progress points where each headline takes over
       const at = (hero.dataset.titleAt || "").split(",").filter(Boolean).map(Number);
       const show = at.length ? Math.max(0, at.reduce((acc, v, k) => (sp >= v ? k : acc), 0)) : Math.min(titles - 1, Math.floor(sp * titles * 0.999));
